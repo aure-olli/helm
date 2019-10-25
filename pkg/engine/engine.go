@@ -348,8 +348,20 @@ func recAllValues(c *chart.Chart, templates map[string]renderable, vals chartuti
 		"Files":        newFiles(c.Files),
 		"Release":      vals["Release"],
 		"Capabilities": vals["Capabilities"],
-		"Values":       vals["Values"],
+		"Values":       make(chartutil.Values),
 	}
+
+	// If there is a {{.Values.ThisChart}} in the parent metadata,
+	// copy that into the {{.Values}} for this template.
+	if c.IsRoot() {
+		next["Values"] = vals["Values"]
+	} else if vs, err := vals.Table("Values." + c.Name()); err == nil {
+		// TODO global
+		// TODO check map
+		next["Values"] = vs
+	}
+
+	templates := make(map[string]renderable{})
 
 	newParentID := c.ChartFullPath()
 	for _, t := range c.ExtraValues {
@@ -359,8 +371,38 @@ func recAllValues(c *chart.Chart, templates map[string]renderable, vals chartuti
 		templates[path.Join(newParentID, t.Name)] = renderable{
 			tpl:      string(t.Data),
 			vals:     next,
-			basePath: path.Join(newParentID, "templates"),
+			basePath: path.Join(newParentID, "values"),
 		}
+	}
+
+	// TODO e ?
+	rendered, err := e.render(vmap)
+	if err != nil {
+		// TODO return ?
+		return map[string]string{}, err
+	}
+	if len(rendered) > 0 {
+		dst := make(map[string]interface{})
+		for _, filename := range sortValues(rendered) {
+			src := make(map[string]interface{})
+			if err := yaml.Unmarshal([]byte(rendered[filename]), &src); err != nil {
+				// TODO return ?
+				return dst, errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
+			}
+			chartutil.CoalesceTables(dst, src)
+		}
+		next["Values"] = CoalesceTables(dst, next["Values"])
+	}
+	vals, err := mergeValues(vrend)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	if len(vmap) > 0 {
+		vals, err = chartutil.CoalesceValues(chrt, vals)
+		if err != nil {
+			return map[string]string{}, err
+		}
+		values["Values"] = vals
 	}
 }
 

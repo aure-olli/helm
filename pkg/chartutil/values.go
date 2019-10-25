@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/mitchellh/copystructure"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
 
@@ -151,15 +152,26 @@ func ToRenderValues(chrt *chart.Chart, chrtVals map[string]interface{}, options 
 		},
 	}
 
-	vals, err := CoalesceValues(chrt, chrtVals)
+	v, err := copystructure.Copy(chrtVals)
 	if err != nil {
 		return top, err
 	}
 
-	if err := ValidateAgainstSchema(chrt, vals); err != nil {
-		errFmt := "values don't meet the specifications of the schema(s) in the following chart(s):\n%s"
-		return top, fmt.Errorf(errFmt, err.Error())
+	vals := v.(map[string]interface{})
+	// if we have an empty map, make sure it is initialized
+	if vals == nil {
+		vals = make(map[string]interface{})
 	}
+
+	// vals, err := CoalesceValues(chrt, chrtVals)
+	// if err != nil {
+	// 	return top, err
+	// }
+
+	// if err := ValidateAgainstSchema(chrt, vals); err != nil {
+	// 	errFmt := "values don't meet the specifications of the schema(s) in the following chart(s):\n%s"
+	// 	return top, fmt.Errorf(errFmt, err.Error())
+	// }
 
 	top["Values"] = vals
 	return top, nil
