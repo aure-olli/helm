@@ -27,6 +27,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+	"sigs.k8s.io/yaml"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -61,6 +62,24 @@ type Engine struct {
 // section contains a value named "bar", that value will be passed on to the
 // bar chart during render time.
 func (e Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]string, error) {
+	// parse values templates and update values
+	vmap := allValues(chrt, values)
+	vrend, err := e.render(vmap)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	vals, err := mergeValues(vrend)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	if len(vmap) > 0 {
+		vals, err = chartutil.CoalesceValues(chrt, vals)
+		if err != nil {
+			return map[string]string{}, err
+		}
+		values["Values"] = vals
+	}
+	// parse templates with the updated values
 	tmap := allTemplates(chrt, values)
 	return e.render(tmap)
 }
@@ -229,6 +248,32 @@ func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable) 
 	return rendered, nil
 }
 
+// mergeValues take a map of rendered yaml values and merge them in a values map
+func mergeValues(rendered map[string]string) (map[string]interface{}, error) {
+	dst := make(map[string]interface{})
+	for _, filename := range sortValues(rendered) {
+		src := make(map[string]interface{})
+		if err := yaml.Unmarshal([]byte(rendered[filename]), &src); err != nil {
+			return dst, errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
+		}
+		chartutil.CoalesceTables(dst, src)
+	}
+	return dst, nil
+}
+
+// sortValues sorts the rendered yaml values files from highest to lowest priority
+func sortValues(tpls map[string]string) []string {
+	keys := make(sort.StringSlice, len(tpls))
+	i := 0
+	for key := range tpls {
+		keys[i] = key
+		i++
+	}
+	// sort.Sort(keys)
+	sort.Sort(sort.Reverse(keys))
+	return keys
+}
+
 func cleanupParseError(filename string, err error) error {
 	tokens := strings.Split(err.Error(), ": ")
 	if len(tokens) == 1 {
@@ -288,6 +333,35 @@ func (p byPathLen) Less(i, j int) bool {
 		return strings.Compare(a, b) == -1
 	}
 	return ca < cb
+}
+
+// allTemplates returns all values templates for a chart.
+func allValues(c *chart.Chart, vals chartutil.Values) map[string]renderable {
+	templates := make(map[string]renderable)
+	recAllValues(c, templates, vals)
+	return templates
+}
+
+func recAllValues(c *chart.Chart, templates map[string]renderable, vals chartutil.Values) {
+	next := map[string]interface{}{
+		"Chart":        c.Metadata,
+		"Files":        newFiles(c.Files),
+		"Release":      vals["Release"],
+		"Capabilities": vals["Capabilities"],
+		"Values":       vals["Values"],
+	}
+
+	newParentID := c.ChartFullPath()
+	for _, t := range c.ExtraValues {
+		if !isTemplateValid(c, t.Name) {
+			continue
+		}
+		templates[path.Join(newParentID, t.Name)] = renderable{
+			tpl:      string(t.Data),
+			vals:     next,
+			basePath: path.Join(newParentID, "templates"),
+		}
+	}
 }
 
 // allTemplates returns all templates for a chart and its dependencies.
