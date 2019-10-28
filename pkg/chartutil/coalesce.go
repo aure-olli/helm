@@ -252,3 +252,8 @@ func CoalesceDep(subch *chart.Chart, dest map[string]interface{}) (map[string]in
 	coalesceValues(subch, dvmap)
 	return dvmap, nil
 }
+
+func CoalesceRoot(chrt *chart.Chart, dest map[string]interface{}) (map[string]interface{}, error) {
+	coalesceValues(chrt, dest)
+	return dest, nil
+}

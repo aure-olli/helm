@@ -66,7 +66,6 @@ func (e Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]s
 	if err := e.allValues(chrt, values); err != nil {
 		return map[string]string{}, err
 	}
-	fmt.Printf("allValues: %v", values)
 	// parse templates with the updated values
 	tmap := allTemplates(chrt, values)
 	return e.render(tmap)
@@ -312,8 +311,6 @@ func (p byPathLen) Less(i, j int) bool {
 
 // allTemplates returns all values templates for a chart.
 func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
-	fmt.Printf("allValues(%s, vals)\n", c.Name())
-
 	next := map[string]interface{}{
 		"Chart":        c.Metadata,
 		"Files":        newFiles(c.Files),
@@ -324,19 +321,17 @@ func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
 
 	// If there is a {{.Values.ThisChart}} in the parent metadata,
 	// copy that into the {{.Values}} for this template.
+	var err error
 	if c.IsRoot() {
-		next["Values"] = vals["Values"]
+		next["Values"], err = chartutil.CoalesceRoot(c, vals["Values"].(map[string]interface{}))
 	} else {
-		var err error
 		next["Values"], err = chartutil.CoalesceDep(c, vals["Values"].(map[string]interface{}))
-		if err != nil {
-			return err
-		}
 	}
-	fmt.Printf("next: %v\n", next)
+	if err != nil {
+		return err
+	}
 
 	templates := make(map[string]renderable)
-
 	newParentID := c.ChartFullPath()
 	for _, t := range c.ExtraValues {
 		if !isTemplateValid(c, t.Name) {
@@ -349,14 +344,10 @@ func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
 		}
 	}
 
-	fmt.Printf("templates: %v\n", templates)
-
 	rendered, err := e.render(templates)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("rendered: %v\n", rendered)
 
 	if len(rendered) > 0 {
 		dst := next["Values"].(map[string]interface{})
@@ -367,8 +358,6 @@ func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
 			}
 			chartutil.CoalesceTablesUpdate(dst, src)
 		}
-
-		fmt.Printf("dst: %v\n", dst)
 	}
 
 	for _, child := range c.Dependencies() {
