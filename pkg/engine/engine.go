@@ -66,6 +66,10 @@ func (e Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]s
 	if err := e.allValues(chrt, values); err != nil {
 		return map[string]string{}, err
 	}
+	err := chartutil.ProcessDependencyImportValues(chrt, values["Values"].(mapmap[string]string))
+	if err != nil {
+		return map[string]string{}, err
+	}
 	// parse templates with the updated values
 	tmap := allTemplates(chrt, values)
 	return e.render(tmap)
@@ -358,6 +362,11 @@ func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
 			}
 			chartutil.CoalesceTablesUpdate(dst, src)
 		}
+	}
+
+	err := chartutil.ProcessDependencyEnabled(c, vals["Values"].(map[string]interface{}))
+	if err != nil {
+		return err
 	}
 
 	for _, child := range c.Dependencies() {

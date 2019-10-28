@@ -22,16 +22,16 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 )
 
-// ProcessDependencies checks through this chart's dependencies, processing accordingly.
-func ProcessDependencies(c *chart.Chart, v Values) error {
-	if err := processDependencyEnabled(c, v, ""); err != nil {
-		return err
-	}
-	return processDependencyImportValues(c)
-}
+// // ProcessDependencies checks through this chart's dependencies, processing accordingly.
+// func ProcessDependencies(c *chart.Chart, v Values) error {
+// 	if err := processDependencyEnabled(c, v, ""); err != nil {
+// 		return err
+// 	}
+// 	return processDependencyImportValues(c)
+// }
 
 // processDependencyConditions disables charts based on condition path value in values
-func processDependencyConditions(reqs []*chart.Dependency, cvals Values, cpath string) {
+func processDependencyConditions(reqs []*chart.Dependency, cvals Values) {
 	if reqs == nil {
 		return
 	}
@@ -39,7 +39,7 @@ func processDependencyConditions(reqs []*chart.Dependency, cvals Values, cpath s
 		for _, c := range strings.Split(strings.TrimSpace(r.Condition), ",") {
 			if len(c) > 0 {
 				// retrieve value
-				vv, err := cvals.PathValue(cpath + c)
+				vv, err := cvals.PathValue(c)
 				if err == nil {
 					// if not bool, warn
 					if bv, ok := vv.(bool); ok {
@@ -115,7 +115,7 @@ func getAliasDependency(charts []*chart.Chart, dep *chart.Dependency) *chart.Cha
 }
 
 // processDependencyEnabled removes disabled charts from dependencies
-func processDependencyEnabled(c *chart.Chart, v map[string]interface{}, path string) error {
+func ProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}) error {
 	if c.Metadata.Dependencies == nil {
 		return nil
 	}
@@ -156,7 +156,7 @@ Loop:
 	}
 	// flag dependencies as enabled/disabled
 	processDependencyTags(c.Metadata.Dependencies, cvals)
-	processDependencyConditions(c.Metadata.Dependencies, cvals, path)
+	processDependencyConditions(c.Metadata.Dependencies, cvals)
 	// make a map of charts to remove
 	rm := map[string]struct{}{}
 	for _, r := range c.Metadata.Dependencies {
@@ -174,13 +174,13 @@ Loop:
 		}
 	}
 
-	// recursively call self to process sub dependencies
-	for _, t := range cd {
-		subpath := path + t.Metadata.Name + "."
-		if err := processDependencyEnabled(t, cvals, subpath); err != nil {
-			return err
-		}
-	}
+	// // recursively call self to process sub dependencies
+	// for _, t := range cd {
+	// 	subpath := path + t.Metadata.Name + "."
+	// 	if err := processDependencyEnabled(t, cvals, subpath); err != nil {
+	// 		return err
+	// 	}
+	// }
 	c.SetDependencies(cd...)
 
 	return nil
@@ -263,7 +263,7 @@ func processImportValues(c *chart.Chart) error {
 }
 
 // processDependencyImportValues imports specified chart values from child to parent.
-func processDependencyImportValues(c *chart.Chart) error {
+func ProcessDependencyImportValues(c *chart.Chart, v map[string]interface{}) error {
 	for _, d := range c.Dependencies() {
 		// recurse
 		if err := processDependencyImportValues(d); err != nil {
