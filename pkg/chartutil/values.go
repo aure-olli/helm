@@ -17,7 +17,6 @@ limitations under the License.
 package chartutil
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"

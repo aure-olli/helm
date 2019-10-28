@@ -203,3 +203,52 @@ func CoalesceTables(dst, src map[string]interface{}) map[string]interface{} {
 	}
 	return dst
 }
+
+// CoalesceTablesUpdate merges a source map into a destination map.
+//
+// src is considered authoritative.
+func CoalesceTablesUpdate(dst, src map[string]interface{}) map[string]interface{} {
+	if dst == nil || src == nil {
+		return dst
+	}
+	// Because dest has higher precedence than src, dest values override src
+	// values.
+	for key, val := range src {
+		if istable(val) {
+			switch innerdst, ok := dst[key]; {
+			case !ok:
+				dst[key] = val
+			case istable(innerdst):
+				CoalesceTablesUpdate(innerdst.(map[string]interface{}),
+					val.(map[string]interface{}))
+			default:
+				log.Printf("warning: overwriting not table with table for %s (%v)", key, innerdst)
+				dst[key] = val
+			}
+		} else if dv, ok := dst[key]; ok && istable(dv) {
+			log.Printf("warning: overwriting table with non table for %s (%v)", key, dv)
+		} else if !ok { // <- ok is still in scope from preceding conditional.
+			dst[key] = val
+		}
+	}
+	return dst
+}
+
+func CoalesceDep(subch *chart.Chart, dest map[string]interface{}) (map[string]interface{}, error) {
+	dv, ok := dest[subch.Name()]
+	if !ok {
+		// If dest doesn't already have the key, create it.
+		dv = make(map[string]interface{})
+		dest[subch.Name()] = dv
+	} else if !istable(dv) {
+		return dest, errors.Errorf("type mismatch on %s: %t", subch.Name(), dv)
+	}
+	dvmap := dv.(map[string]interface{})
+
+	// Get globals out of dest and merge them into dvmap.
+	coalesceGlobals(dvmap, dest)
+
+	// Now coalesce the rest of the values.
+	coalesceValues(subch, dvmap)
+	return dvmap, nil
+}

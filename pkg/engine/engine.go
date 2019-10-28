@@ -63,22 +63,10 @@ type Engine struct {
 // bar chart during render time.
 func (e Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]string, error) {
 	// parse values templates and update values
-	vmap := allValues(chrt, values)
-	vrend, err := e.render(vmap)
-	if err != nil {
+	if err := e.allValues(chrt, values); err != nil {
 		return map[string]string{}, err
 	}
-	vals, err := mergeValues(vrend)
-	if err != nil {
-		return map[string]string{}, err
-	}
-	if len(vmap) > 0 {
-		vals, err = chartutil.CoalesceValues(chrt, vals)
-		if err != nil {
-			return map[string]string{}, err
-		}
-		values["Values"] = vals
-	}
+	fmt.Printf("allValues: %v", values)
 	// parse templates with the updated values
 	tmap := allTemplates(chrt, values)
 	return e.render(tmap)
@@ -248,19 +236,6 @@ func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable) 
 	return rendered, nil
 }
 
-// mergeValues take a map of rendered yaml values and merge them in a values map
-func mergeValues(rendered map[string]string) (map[string]interface{}, error) {
-	dst := make(map[string]interface{})
-	for _, filename := range sortValues(rendered) {
-		src := make(map[string]interface{})
-		if err := yaml.Unmarshal([]byte(rendered[filename]), &src); err != nil {
-			return dst, errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
-		}
-		chartutil.CoalesceTables(dst, src)
-	}
-	return dst, nil
-}
-
 // sortValues sorts the rendered yaml values files from highest to lowest priority
 func sortValues(tpls map[string]string) []string {
 	keys := make(sort.StringSlice, len(tpls))
@@ -269,8 +244,8 @@ func sortValues(tpls map[string]string) []string {
 		keys[i] = key
 		i++
 	}
-	// sort.Sort(keys)
-	sort.Sort(sort.Reverse(keys))
+	sort.Sort(keys)
+	// sort.Sort(sort.Reverse(keys))
 	return keys
 }
 
@@ -336,32 +311,31 @@ func (p byPathLen) Less(i, j int) bool {
 }
 
 // allTemplates returns all values templates for a chart.
-func allValues(c *chart.Chart, vals chartutil.Values) map[string]renderable {
-	templates := make(map[string]renderable)
-	recAllValues(c, templates, vals)
-	return templates
-}
+func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
+	fmt.Printf("allValues(%s, vals)\n", c.Name())
 
-func recAllValues(c *chart.Chart, templates map[string]renderable, vals chartutil.Values) {
 	next := map[string]interface{}{
 		"Chart":        c.Metadata,
 		"Files":        newFiles(c.Files),
 		"Release":      vals["Release"],
 		"Capabilities": vals["Capabilities"],
-		"Values":       make(chartutil.Values),
+		"Values":       nil,
 	}
 
 	// If there is a {{.Values.ThisChart}} in the parent metadata,
 	// copy that into the {{.Values}} for this template.
 	if c.IsRoot() {
 		next["Values"] = vals["Values"]
-	} else if vs, err := vals.Table("Values." + c.Name()); err == nil {
-		// TODO global
-		// TODO check map
-		next["Values"] = vs
+	} else {
+		var err error
+		next["Values"], err = chartutil.CoalesceDep(c, vals["Values"].(map[string]interface{}))
+		if err != nil {
+			return err
+		}
 	}
+	fmt.Printf("next: %v\n", next)
 
-	templates := make(map[string]renderable{})
+	templates := make(map[string]renderable)
 
 	newParentID := c.ChartFullPath()
 	for _, t := range c.ExtraValues {
@@ -375,35 +349,34 @@ func recAllValues(c *chart.Chart, templates map[string]renderable, vals chartuti
 		}
 	}
 
-	// TODO e ?
-	rendered, err := e.render(vmap)
+	fmt.Printf("templates: %v\n", templates)
+
+	rendered, err := e.render(templates)
 	if err != nil {
-		// TODO return ?
-		return map[string]string{}, err
+		return err
 	}
+
+	fmt.Printf("rendered: %v\n", rendered)
+
 	if len(rendered) > 0 {
-		dst := make(map[string]interface{})
+		dst := next["Values"].(map[string]interface{})
 		for _, filename := range sortValues(rendered) {
 			src := make(map[string]interface{})
 			if err := yaml.Unmarshal([]byte(rendered[filename]), &src); err != nil {
-				// TODO return ?
-				return dst, errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
+				return errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
 			}
-			chartutil.CoalesceTables(dst, src)
+			chartutil.CoalesceTablesUpdate(dst, src)
 		}
-		next["Values"] = CoalesceTables(dst, next["Values"])
+
+		fmt.Printf("dst: %v\n", dst)
 	}
-	vals, err := mergeValues(vrend)
-	if err != nil {
-		return map[string]string{}, err
-	}
-	if len(vmap) > 0 {
-		vals, err = chartutil.CoalesceValues(chrt, vals)
-		if err != nil {
-			return map[string]string{}, err
+
+	for _, child := range c.Dependencies() {
+		if err := e.allValues(child, next); err != nil {
+			return err
 		}
-		values["Values"] = vals
 	}
+	return nil
 }
 
 // allTemplates returns all templates for a chart and its dependencies.
