@@ -426,7 +426,7 @@ func TestRenderBuiltinValues(t *testing.T) {
 	outer.AddDependency(inner)
 
 	inject := chartutil.Values{
-		"Values": "",
+		"Values": map[string]interface{}{},
 		"Chart":  outer.Metadata,
 		"Release": map[string]interface{}{
 			"Name": "Aeneid",
@@ -463,7 +463,7 @@ func TestAlterFuncMap_include(t *testing.T) {
 	}
 
 	v := chartutil.Values{
-		"Values": "",
+		"Values": map[string]interface{}{},
 		"Chart":  c.Metadata,
 		"Release": map[string]interface{}{
 			"Name": "Mistah Kurtz",

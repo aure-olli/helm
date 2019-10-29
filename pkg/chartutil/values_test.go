@@ -175,7 +175,7 @@ chapter:
 	if err != nil {
 		panic(err)
 	}
-	ch1, err := Value(d).Table("chapter.one")
+	ch1, err := Values(d).Table("chapter.one")
 	if err != nil {
 		panic("could not find chapter one")
 	}
@@ -195,7 +195,7 @@ chapter:
   three:
     title: "The Spouter Inn"
 `
-	var d Value
+	var d Values
 	d, err := ReadValues([]byte(doc))
 	if err != nil {
 		t.Fatalf("Failed to parse the White Whale: %s", err)
@@ -266,7 +266,7 @@ chapter:
   three:
     title: "The Spouter Inn"
 `
-	var d Value
+	var d Values
 	d, err := ReadValues([]byte(doc))
 	if err != nil {
 		t.Fatalf("Failed to parse the White Whale: %s", err)
