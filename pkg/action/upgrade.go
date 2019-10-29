@@ -130,9 +130,9 @@ func (u *Upgrade) prepareUpgrade(name string, chart *chart.Chart, vals map[strin
 		return nil, nil, err
 	}
 
-	if err := chartutil.ProcessDependencies(chart, vals); err != nil {
-		return nil, nil, err
-	}
+	// if err := chartutil.ProcessDependencies(chart, vals); err != nil {
+	// 	return nil, nil, err
+	// }
 
 	// finds the non-deleted release with the given name
 	lastRelease, err := u.cfg.Releases.Last(name)

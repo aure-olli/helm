@@ -206,15 +206,16 @@ func set(path []string, data map[string]interface{}) map[string]interface{} {
 }
 
 // processImportValues merges values from child to parent based on the chart's dependencies' ImportValues field.
-func processImportValues(c *chart.Chart) error {
+func processImportValues(c *chart.Chart, v map[string]interface{}) error {
 	if c.Metadata.Dependencies == nil {
 		return nil
 	}
-	// combine chart values and empty config to get Values
-	cvals, err := CoalesceValues(c, nil)
-	if err != nil {
-		return err
-	}
+	// // combine chart values and empty config to get Values
+	// cvals, err := CoalesceValues(c, nil)
+	// if err != nil {
+	// 	return err
+	// }
+	cvals := Values(v)
 	b := make(map[string]interface{})
 	// import values from each dependency if specified in import-values
 	for _, r := range c.Metadata.Dependencies {
@@ -257,7 +258,7 @@ func processImportValues(c *chart.Chart) error {
 	}
 
 	// set the new values
-	c.Values = CoalesceTables(b, cvals)
+	CoalesceTables(b, cvals)
 
 	return nil
 }
@@ -266,9 +267,10 @@ func processImportValues(c *chart.Chart) error {
 func ProcessDependencyImportValues(c *chart.Chart, v map[string]interface{}) error {
 	for _, d := range c.Dependencies() {
 		// recurse
-		if err := processDependencyImportValues(d); err != nil {
+		dv := v[d.Name()].(map[string]interface{})
+		if err := ProcessDependencyImportValues(d, dv); err != nil {
 			return err
 		}
 	}
-	return processImportValues(c)
+	return processImportValues(c, v)
 }

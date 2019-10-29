@@ -62,12 +62,12 @@ type Engine struct {
 // section contains a value named "bar", that value will be passed on to the
 // bar chart during render time.
 func (e Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]string, error) {
-	// parse values templates and update values
-	if err := e.allValues(chrt, values); err != nil {
+	// parse values templates and update values and dependencies
+	if err := e.updateRenderValues(chrt, values); err != nil {
 		return map[string]string{}, err
 	}
-	err := chartutil.ProcessDependencyImportValues(chrt, values["Values"].(mapmap[string]string))
-	if err != nil {
+	// import values from dependenvies
+	if err := chartutil.ProcessDependencyImportValues(chrt, values["Values"].(map[string]interface{})); err != nil {
 		return map[string]string{}, err
 	}
 	// parse templates with the updated values
@@ -239,19 +239,6 @@ func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable) 
 	return rendered, nil
 }
 
-// sortValues sorts the rendered yaml values files from highest to lowest priority
-func sortValues(tpls map[string]string) []string {
-	keys := make(sort.StringSlice, len(tpls))
-	i := 0
-	for key := range tpls {
-		keys[i] = key
-		i++
-	}
-	sort.Sort(keys)
-	// sort.Sort(sort.Reverse(keys))
-	return keys
-}
-
 func cleanupParseError(filename string, err error) error {
 	tokens := strings.Split(err.Error(), ": ")
 	if len(tokens) == 1 {
@@ -289,32 +276,8 @@ func cleanupExecError(filename string, err error) error {
 	return err
 }
 
-func sortTemplates(tpls map[string]renderable) []string {
-	keys := make([]string, len(tpls))
-	i := 0
-	for key := range tpls {
-		keys[i] = key
-		i++
-	}
-	sort.Sort(sort.Reverse(byPathLen(keys)))
-	return keys
-}
-
-type byPathLen []string
-
-func (p byPathLen) Len() int      { return len(p) }
-func (p byPathLen) Swap(i, j int) { p[j], p[i] = p[i], p[j] }
-func (p byPathLen) Less(i, j int) bool {
-	a, b := p[i], p[j]
-	ca, cb := strings.Count(a, "/"), strings.Count(b, "/")
-	if ca == cb {
-		return strings.Compare(a, b) == -1
-	}
-	return ca < cb
-}
-
 // allTemplates returns all values templates for a chart.
-func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
+func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error {
 	next := map[string]interface{}{
 		"Chart":        c.Metadata,
 		"Files":        newFiles(c.Files),
@@ -364,17 +327,54 @@ func (e Engine) allValues(c *chart.Chart, vals chartutil.Values) error {
 		}
 	}
 
-	err := chartutil.ProcessDependencyEnabled(c, vals["Values"].(map[string]interface{}))
+	err = chartutil.ProcessDependencyEnabled(c, vals["Values"].(map[string]interface{}))
 	if err != nil {
 		return err
 	}
 
 	for _, child := range c.Dependencies() {
-		if err := e.allValues(child, next); err != nil {
+		if err := e.updateRenderValues(child, next); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// sortValues sorts the rendered yaml values files from lowest to highest priority
+func sortValues(tpls map[string]string) []string {
+	keys := make(sort.StringSlice, len(tpls))
+	i := 0
+	for key := range tpls {
+		keys[i] = key
+		i++
+	}
+	sort.Sort(keys)
+	// sort.Sort(sort.Reverse(keys))
+	return keys
+}
+
+func sortTemplates(tpls map[string]renderable) []string {
+	keys := make([]string, len(tpls))
+	i := 0
+	for key := range tpls {
+		keys[i] = key
+		i++
+	}
+	sort.Sort(sort.Reverse(byPathLen(keys)))
+	return keys
+}
+
+type byPathLen []string
+
+func (p byPathLen) Len() int      { return len(p) }
+func (p byPathLen) Swap(i, j int) { p[j], p[i] = p[i], p[j] }
+func (p byPathLen) Less(i, j int) bool {
+	a, b := p[i], p[j]
+	ca, cb := strings.Count(a, "/"), strings.Count(b, "/")
+	if ca == cb {
+		return strings.Compare(a, b) == -1
+	}
+	return ca < cb
 }
 
 // allTemplates returns all templates for a chart and its dependencies.

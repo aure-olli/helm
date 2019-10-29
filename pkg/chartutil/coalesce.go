@@ -227,7 +227,7 @@ func CoalesceTablesUpdate(dst, src map[string]interface{}) map[string]interface{
 			}
 		} else if dv, ok := dst[key]; ok && istable(dv) {
 			log.Printf("warning: overwriting table with non table for %s (%v)", key, dv)
-		} else if !ok { // <- ok is still in scope from preceding conditional.
+		} else { // <- ok is still in scope from preceding conditional.
 			dst[key] = val
 		}
 	}
