@@ -37,6 +37,8 @@ import (
 func CoalesceValues(chrt *chart.Chart, vals map[string]interface{}) (Values, error) {
 	// create a copy of vals and then pass it to coalesce
 	// and coalesceDeps, as both will mutate the passed values
+
+	// TODO: check usage
 	v, err := copystructure.Copy(vals)
 	if err != nil {
 		return vals, err
@@ -211,8 +213,7 @@ func CoalesceTablesUpdate(dst, src map[string]interface{}) map[string]interface{
 	if dst == nil || src == nil {
 		return dst
 	}
-	// Because dest has higher precedence than src, dest values override src
-	// values.
+	// src values override dest values.
 	for key, val := range src {
 		if istable(val) {
 			switch innerdst, ok := dst[key]; {
@@ -227,13 +228,15 @@ func CoalesceTablesUpdate(dst, src map[string]interface{}) map[string]interface{
 			}
 		} else if dv, ok := dst[key]; ok && istable(dv) {
 			log.Printf("warning: overwriting table with non table for %s (%v)", key, dv)
-		} else { // <- ok is still in scope from preceding conditional.
+		} else {
 			dst[key] = val
 		}
 	}
 	return dst
 }
 
+// CoalesceDep returns the render values for subch,
+// merged with subch values and dest global
 func CoalesceDep(subch *chart.Chart, dest map[string]interface{}) (map[string]interface{}, error) {
 	dv, ok := dest[subch.Name()]
 	if !ok {
@@ -253,6 +256,8 @@ func CoalesceDep(subch *chart.Chart, dest map[string]interface{}) (map[string]in
 	return dvmap, nil
 }
 
+// CoalesceRoot merges dest with chrt values,
+// it returns dest for a similar behavior with CoalesceDep
 func CoalesceRoot(chrt *chart.Chart, dest map[string]interface{}) (map[string]interface{}, error) {
 	coalesceValues(chrt, dest)
 	return dest, nil

@@ -131,10 +131,11 @@ type ReleaseOptions struct {
 	IsInstall bool
 }
 
-// ToRenderValues composes the struct from the data coming from the Releases, Charts and Values files
+// ToRenderValues composes the struct for rendering
 //
 // This takes both ReleaseOptions and Capabilities to merge into the render values.
 func ToRenderValues(chrt *chart.Chart, chrtVals map[string]interface{}, options ReleaseOptions, caps *Capabilities) (Values, error) {
+	// TODO check for usage
 	if caps == nil {
 		caps = DefaultCapabilities
 	}

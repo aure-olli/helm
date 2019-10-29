@@ -22,14 +22,6 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 )
 
-// // ProcessDependencies checks through this chart's dependencies, processing accordingly.
-// func ProcessDependencies(c *chart.Chart, v Values) error {
-// 	if err := processDependencyEnabled(c, v, ""); err != nil {
-// 		return err
-// 	}
-// 	return processDependencyImportValues(c)
-// }
-
 // processDependencyConditions disables charts based on condition path value in values
 func processDependencyConditions(reqs []*chart.Dependency, cvals Values) {
 	if reqs == nil {
@@ -174,13 +166,6 @@ Loop:
 		}
 	}
 
-	// // recursively call self to process sub dependencies
-	// for _, t := range cd {
-	// 	subpath := path + t.Metadata.Name + "."
-	// 	if err := processDependencyEnabled(t, cvals, subpath); err != nil {
-	// 		return err
-	// 	}
-	// }
 	c.SetDependencies(cd...)
 
 	return nil
@@ -210,11 +195,7 @@ func processImportValues(c *chart.Chart, v map[string]interface{}) error {
 	if c.Metadata.Dependencies == nil {
 		return nil
 	}
-	// // combine chart values and empty config to get Values
-	// cvals, err := CoalesceValues(c, nil)
-	// if err != nil {
-	// 	return err
-	// }
+
 	cvals := Values(v)
 	b := make(map[string]interface{})
 	// import values from each dependency if specified in import-values
