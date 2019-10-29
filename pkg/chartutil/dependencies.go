@@ -16,6 +16,7 @@ limitations under the License.
 package chartutil
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -27,11 +28,14 @@ func processDependencyConditions(reqs []*chart.Dependency, cvals Values) {
 	if reqs == nil {
 		return
 	}
+	fmt.Printf("processDependencyConditions([%d], %v)\n", len(reqs), cvals)
 	for _, r := range reqs {
+		fmt.Printf("Condition: %v\n", strings.Split(strings.TrimSpace(r.Condition), ","))
 		for _, c := range strings.Split(strings.TrimSpace(r.Condition), ",") {
 			if len(c) > 0 {
 				// retrieve value
 				vv, err := cvals.PathValue(c)
+				fmt.Printf("PathValue(%s): %v, %v\n", c, vv, err)
 				if err == nil {
 					// if not bool, warn
 					if bv, ok := vv.(bool); ok {
@@ -55,11 +59,13 @@ func processDependencyTags(reqs []*chart.Dependency, cvals Values) {
 		return
 	}
 	vt, err := cvals.Table("tags")
+	fmt.Printf("processDependencyTags([%d], %v/%v)\n", len(reqs), vt, err)
 	if err != nil {
 		return
 	}
 	for _, r := range reqs {
 		var hasTrue, hasFalse bool
+		fmt.Printf("Tags(%s/%s): %v\n", r.Name, r.Alias, r.Tags)
 		for _, k := range r.Tags {
 			if b, ok := vt[k]; ok {
 				// if not bool, warn
@@ -108,6 +114,7 @@ func getAliasDependency(charts []*chart.Chart, dep *chart.Dependency) *chart.Cha
 
 // processDependencyEnabled removes disabled charts from dependencies
 func ProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}) error {
+	fmt.Printf("processDependencyTags(%s, %v)\n", c.Name(), v)
 	if c.Metadata.Dependencies == nil {
 		return nil
 	}

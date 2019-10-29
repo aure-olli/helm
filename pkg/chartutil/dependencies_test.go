@@ -61,6 +61,23 @@ func TestLoadDependency(t *testing.T) {
 	check(c.Lock.Dependencies)
 }
 
+func recProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}) error {
+	if err := ProcessDependencyEnabled(c, v); err != nil {
+		return err
+	}
+	for _, d := range c.Dependencies() {
+		dv, ok := v[d.Name()]
+		dm := map[string]interface{}{}
+		if ok && dv != nil {
+			dm = dv.(map[string]interface{})
+		}
+		if err := recProcessDependencyEnabled(d, dm); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func TestDependencyEnabled(t *testing.T) {
 	type M = map[string]interface{}
 	tests := []struct {
@@ -116,7 +133,7 @@ func TestDependencyEnabled(t *testing.T) {
 	for _, tc := range tests {
 		c := loadChart(t, "testdata/subpop")
 		t.Run(tc.name, func(t *testing.T) {
-			if err := ProcessDependencyEnabled(c, tc.v); err != nil {
+			if err := recProcessDependencyEnabled(c, tc.v); err != nil {
 				t.Fatalf("error processing enabled dependencies %v", err)
 			}
 
