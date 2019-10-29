@@ -61,11 +61,7 @@ func Templates(linter *support.Linter, values map[string]interface{}, namespace 
 		Namespace: namespace,
 	}
 
-	cvals, err := chartutil.CoalesceValues(chart, values)
-	if err != nil {
-		return
-	}
-	valuesToRender, err := chartutil.ToRenderValues(chart, cvals, options, nil)
+	valuesToRender, err := chartutil.ToRenderValues(chart, values, options, nil)
 	if err != nil {
 		linter.RunLinterRule(support.ErrorSev, path, err)
 		return
@@ -102,10 +98,6 @@ func Templates(linter *support.Linter, values map[string]interface{}, namespace 
 		if filepath.Ext(fileName) != ".yaml" || filepath.Ext(fileName) == ".yml" {
 			continue
 		}
-
-		// NOTE: disabled for now, Refs https://github.com/helm/helm/issues/1463
-		// Check that all the templates have a matching value
-		//linter.RunLinterRule(support.WarningSev, path, validateNoMissingValues(templatesPath, valuesToRender, preExecutedTemplate))
 
 		// NOTE: disabled for now, Refs https://github.com/helm/helm/issues/1037
 		// linter.RunLinterRule(support.WarningSev, path, validateQuotes(string(preExecutedTemplate)))

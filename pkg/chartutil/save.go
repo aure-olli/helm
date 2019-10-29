@@ -169,6 +169,14 @@ func writeTarContents(out *tar.Writer, c *chart.Chart, prefix string) error {
 		}
 	}
 
+	// Save values templates
+	for _, f := range c.ExtraValues {
+		n := filepath.Join(base, f.Name)
+		if err := writeToTar(out, n, f.Data); err != nil {
+			return err
+		}
+	}
+
 	// Save templates
 	for _, f := range c.Templates {
 		n := filepath.Join(base, f.Name)

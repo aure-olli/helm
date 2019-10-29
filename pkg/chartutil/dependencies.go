@@ -142,10 +142,7 @@ Loop:
 	for _, lr := range c.Metadata.Dependencies {
 		lr.Enabled = true
 	}
-	cvals, err := CoalesceValues(c, v)
-	if err != nil {
-		return err
-	}
+	cvals := Values(v)
 	// flag dependencies as enabled/disabled
 	processDependencyTags(c.Metadata.Dependencies, cvals)
 	processDependencyConditions(c.Metadata.Dependencies, cvals)
