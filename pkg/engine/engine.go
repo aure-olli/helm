@@ -279,7 +279,7 @@ func cleanupExecError(filename string, err error) error {
 // updateRenderValues update render values with chart values and values templates.
 func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error {
 	var sb strings.Builder
-	if err := e.recUpdateRenderValues(c, vals, sb); err != nil {
+	if err := e.recUpdateRenderValues(c, vals, &sb); err != nil {
 		return err
 	}
 	// Check for values validation errors
@@ -289,13 +289,12 @@ func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error 
 	return nil
 }
 
-func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, sb strings.Builder) error {
+func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, sb *strings.Builder) error {
 	next := map[string]interface{}{
 		"Chart":        c.Metadata,
 		"Files":        newFiles(c.Files),
 		"Release":      vals["Release"],
 		"Capabilities": vals["Capabilities"],
-		"Values":       nil,
 	}
 
 	// If there is a {{.Values.ThisChart}} in the parent metadata,
