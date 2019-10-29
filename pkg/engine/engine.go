@@ -276,8 +276,20 @@ func cleanupExecError(filename string, err error) error {
 	return err
 }
 
-// allTemplates returns all values templates for a chart.
+// updateRenderValues update render values with chart values and values templates.
 func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error {
+	var sb strings.Builder
+	if err := e.recUpdateRenderValues(c, vals, sb); err != nil {
+		return err
+	}
+	// Check for values validation errors
+	if sb.Len() > 0 {
+		return errors.New(sb.String())
+	}
+	return nil
+}
+
+func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, sb strings.Builder) error {
 	next := map[string]interface{}{
 		"Chart":        c.Metadata,
 		"Files":        newFiles(c.Files),
@@ -286,18 +298,30 @@ func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error 
 		"Values":       nil,
 	}
 
+	// TODO: deal with deletion on nil
+
 	// If there is a {{.Values.ThisChart}} in the parent metadata,
 	// copy that into the {{.Values}} for this template.
+	var nvals map[string]interface{}
 	var err error
 	if c.IsRoot() {
-		next["Values"], err = chartutil.CoalesceRoot(c, vals["Values"].(map[string]interface{}))
+		nvals, err = chartutil.CoalesceRoot(c, vals["Values"].(map[string]interface{}))
 	} else {
-		next["Values"], err = chartutil.CoalesceDep(c, vals["Values"].(map[string]interface{}))
+		nvals, err = chartutil.CoalesceDep(c, vals["Values"].(map[string]interface{}))
 	}
 	if err != nil {
 		return err
 	}
-
+	next["Values"] = nvals
+	// Get validations errors of chart values, before applying values template
+	if c.Schema != nil {
+		err = chartutil.ValidateAgainstSingleSchema(nvals, c.Schema)
+		if err != nil {
+			sb.WriteString(fmt.Sprintf("%s:\n", c.Name()))
+			sb.WriteString(err.Error())
+		}
+	}
+	// Get all values templates of the chart
 	templates := make(map[string]renderable)
 	newParentID := c.ChartFullPath()
 	for _, t := range c.ExtraValues {
@@ -310,12 +334,12 @@ func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error 
 			basePath: path.Join(newParentID, "values"),
 		}
 	}
-
+	// Render all values templates
 	rendered, err := e.render(templates)
 	if err != nil {
 		return err
 	}
-
+	// Parse and apply all values templates
 	if len(rendered) > 0 {
 		dst := next["Values"].(map[string]interface{})
 		for _, filename := range sortValues(rendered) {
@@ -326,14 +350,15 @@ func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error 
 			chartutil.CoalesceTablesUpdate(dst, src)
 		}
 	}
-
-	err = chartutil.ProcessDependencyEnabled(c, vals["Values"].(map[string]interface{}))
+	// Remove all disabled dependencies
+	err = chartutil.ProcessDependencyEnabled(c, nvals)
 	if err != nil {
 		return err
 	}
-
+	// Recursive upudate on enabled dependencies
 	for _, child := range c.Dependencies() {
-		if err := e.updateRenderValues(child, next); err != nil {
+		err = e.recUpdateRenderValues(child, next, sb)
+		if err != nil {
 			return err
 		}
 	}
