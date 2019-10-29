@@ -116,7 +116,7 @@ func TestDependencyEnabled(t *testing.T) {
 	for _, tc := range tests {
 		c := loadChart(t, "testdata/subpop")
 		t.Run(tc.name, func(t *testing.T) {
-			if err := processDependencyEnabled(c, tc.v, ""); err != nil {
+			if err := ProcessDependencyEnabled(c, tc.v); err != nil {
 				t.Fatalf("error processing enabled dependencies %v", err)
 			}
 
@@ -212,7 +212,7 @@ func TestProcessDependencyImportValues(t *testing.T) {
 	e["SCBexported2A"] = "blaster"
 	e["global.SC1exported2.all.SC1exported3"] = "SC1expstr"
 
-	if err := processDependencyImportValues(c); err != nil {
+	if err := ProcessDependencyImportValues(c, c.Values); err != nil {
 		t.Fatalf("processing import values dependencies %v", err)
 	}
 	cc := Values(c.Values)
@@ -285,7 +285,7 @@ func TestDependentChartAliases(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := processDependencyEnabled(c, c.Values, ""); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 
@@ -306,7 +306,7 @@ func TestDependentChartWithSubChartsAbsentInDependency(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := processDependencyEnabled(c, c.Values, ""); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 
@@ -343,7 +343,7 @@ func TestDependentChartsWithSubchartsAllSpecifiedInDependency(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := processDependencyEnabled(c, c.Values, ""); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 
@@ -363,7 +363,7 @@ func TestDependentChartsWithSomeSubchartsSpecifiedInDependency(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := processDependencyEnabled(c, c.Values, ""); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 

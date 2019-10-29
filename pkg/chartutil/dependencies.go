@@ -142,10 +142,9 @@ Loop:
 	for _, lr := range c.Metadata.Dependencies {
 		lr.Enabled = true
 	}
-	cvals := Values(v)
 	// flag dependencies as enabled/disabled
-	processDependencyTags(c.Metadata.Dependencies, cvals)
-	processDependencyConditions(c.Metadata.Dependencies, cvals)
+	processDependencyTags(c.Metadata.Dependencies, v)
+	processDependencyConditions(c.Metadata.Dependencies, v)
 	// make a map of charts to remove
 	rm := map[string]struct{}{}
 	for _, r := range c.Metadata.Dependencies {
@@ -216,7 +215,7 @@ func processImportValues(c *chart.Chart, v map[string]interface{}) error {
 					continue
 				}
 				// create value map from child to be merged into parent
-				b = CoalesceTables(cvals, pathToMap(parent, vv.AsMap()))
+				b = CoalesceTables(cvals, pathToMap(parent, vv))
 			case string:
 				child := "exports." + iv
 				outiv = append(outiv, map[string]string{
@@ -228,7 +227,7 @@ func processImportValues(c *chart.Chart, v map[string]interface{}) error {
 					log.Printf("Warning: ImportValues missing table: %v", err)
 					continue
 				}
-				b = CoalesceTables(b, vm.AsMap())
+				b = CoalesceTables(b, vm)
 			}
 		}
 		// set our formatted import values
@@ -242,6 +241,8 @@ func processImportValues(c *chart.Chart, v map[string]interface{}) error {
 }
 
 // processDependencyImportValues imports specified chart values from child to parent.
+//
+// v is expected to existing path to every sub chart
 func ProcessDependencyImportValues(c *chart.Chart, v map[string]interface{}) error {
 	for _, d := range c.Dependencies() {
 		// recurse
