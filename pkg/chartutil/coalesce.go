@@ -214,11 +214,7 @@ func CoalesceTablesUpdate(dst, src map[string]interface{}) map[string]interface{
 	// Because dest has higher precedence than src, dest values override src
 	// values.
 	for key, val := range src {
-		if val == nil {
-			if _, ok := dst[key]; ok {
-				delete(dst, key)
-			}
-		} else if istable(val) {
+		if istable(val) {
 			switch innerdst, ok := dst[key]; {
 			case !ok:
 				dst[key] = val

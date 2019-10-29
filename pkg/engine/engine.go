@@ -298,8 +298,6 @@ func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, sb 
 		"Values":       nil,
 	}
 
-	// TODO: deal with deletion on nil
-
 	// If there is a {{.Values.ThisChart}} in the parent metadata,
 	// copy that into the {{.Values}} for this template.
 	var nvals map[string]interface{}
