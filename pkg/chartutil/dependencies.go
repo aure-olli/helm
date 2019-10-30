@@ -191,12 +191,11 @@ func set(path []string, data map[string]interface{}) map[string]interface{} {
 }
 
 // processImportValues merges values from child to parent based on the chart's dependencies' ImportValues field.
-func processImportValues(c *chart.Chart, v map[string]interface{}) error {
+func processImportValues(c *chart.Chart, cvals Values) error {
 	if c.Metadata.Dependencies == nil {
 		return nil
 	}
 
-	cvals := Values(v)
 	b := make(map[string]interface{})
 	// import values from each dependency if specified in import-values
 	for _, r := range c.Metadata.Dependencies {

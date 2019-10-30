@@ -241,10 +241,14 @@ func TestProcessDependencyImportValues(t *testing.T) {
 	e["SCBexported2A"] = "blaster"
 	e["global.SC1exported2.all.SC1exported3"] = "SC1expstr"
 
-	if err := ProcessDependencyImportValues(c, c.Values); err != nil {
+	cvals, err := CoalesceValues(c, nil)
+	if err != nil {
+		t.Fatalf("coalescing values %v", err)
+	}
+	if err := ProcessDependencyImportValues(c, cvals); err != nil {
 		t.Fatalf("processing import values dependencies %v", err)
 	}
-	cc := Values(c.Values)
+	cc := Values(cvals)
 	for kk, vv := range e {
 		pv, err := cc.PathValue(kk)
 		if err != nil {
