@@ -66,10 +66,6 @@ func (e Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]s
 	if err := e.updateRenderValues(chrt, values); err != nil {
 		return map[string]string{}, err
 	}
-	// import values from dependenvies
-	if err := chartutil.ProcessDependencyImportValues(chrt, values["Values"].(map[string]interface{})); err != nil {
-		return map[string]string{}, err
-	}
 	// parse templates with the updated values
 	tmap := allTemplates(chrt, values)
 	return e.render(tmap)
@@ -279,17 +275,23 @@ func cleanupExecError(filename string, err error) error {
 // updateRenderValues update render values with chart values and values templates.
 func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error {
 	var sb strings.Builder
-	if err := e.recUpdateRenderValues(c, vals, &sb); err != nil {
+	// parse values templates and update values and dependencies
+	if err := e.recUpdateRenderValues(c, vals, nil, &sb); err != nil {
 		return err
 	}
 	// Check for values validation errors
 	if sb.Len() > 0 {
 		return errors.New(sb.String())
 	}
+	// import values from dependenvies
+	if err := chartutil.ProcessDependencyImportValues(c, vals["Values"].(map[string]interface{})); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, sb *strings.Builder) error {
+func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, tags map[string]interface{}, sb *strings.Builder) error {
 	next := map[string]interface{}{
 		"Chart":        c.Metadata,
 		"Files":        newFiles(c.Files),
@@ -338,23 +340,26 @@ func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, sb 
 	}
 	// Parse and apply all values templates
 	if len(rendered) > 0 {
-		dst := next["Values"].(map[string]interface{})
 		for _, filename := range sortValues(rendered) {
 			src := make(map[string]interface{})
 			if err := yaml.Unmarshal([]byte(rendered[filename]), &src); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
 			}
-			chartutil.CoalesceTablesUpdate(dst, src)
+			chartutil.CoalesceTablesUpdate(tags, src)
 		}
 	}
+	// Get tags of the root
+	if c.IsRoot() {
+		tags = chartutil.GetTags(nvals)
+	}
 	// Remove all disabled dependencies
-	err = chartutil.ProcessDependencyEnabled(c, nvals)
+	err = chartutil.ProcessDependencyEnabled(c, nvals, tags)
 	if err != nil {
 		return err
 	}
 	// Recursive upudate on enabled dependencies
 	for _, child := range c.Dependencies() {
-		err = e.recUpdateRenderValues(child, next, sb)
+		err = e.recUpdateRenderValues(child, next, tags, sb)
 		if err != nil {
 			return err
 		}

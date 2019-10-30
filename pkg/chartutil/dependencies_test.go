@@ -63,11 +63,12 @@ func TestLoadDependency(t *testing.T) {
 
 // recProcessDependencyEnabled is mostly a simplified version of
 // Engine.recUpdateRenderValues, for testing only dependencies
-func recProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}) error {
+func recProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}, tags map[string]interface{}) error {
 	// get the local values
 	var err error
 	if c.IsRoot() {
 		v, err = CoalesceRoot(c, v)
+		tags = GetTags(v)
 	} else {
 		v, err = CoalesceDep(c, v)
 	}
@@ -75,13 +76,13 @@ func recProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}) error
 		return err
 	}
 	// Remove all disabled dependencies
-	err = ProcessDependencyEnabled(c, v)
+	err = ProcessDependencyEnabled(c, v, tags)
 	if err != nil {
 		return err
 	}
 	// Recursive upudate on enabled dependencies
 	for _, child := range c.Dependencies() {
-		err = recProcessDependencyEnabled(child, v)
+		err = recProcessDependencyEnabled(child, v, tags)
 		if err != nil {
 			return err
 		}
@@ -143,8 +144,9 @@ func TestDependencyEnabled(t *testing.T) {
 
 	for _, tc := range tests {
 		c := loadChart(t, "testdata/subpop")
+		values := map[string]interface{}{"Values": tc.v}
 		t.Run(tc.name, func(t *testing.T) {
-			if err := recProcessDependencyEnabled(c, tc.v); err != nil {
+			if err := recProcessDependencyEnabled(c, values, nil); err != nil {
 				t.Fatalf("error processing enabled dependencies %v", err)
 			}
 
@@ -313,7 +315,7 @@ func TestDependentChartAliases(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values, GetTags(c.Values)); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 
@@ -334,7 +336,7 @@ func TestDependentChartWithSubChartsAbsentInDependency(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values, GetTags(c.Values)); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 
@@ -371,7 +373,7 @@ func TestDependentChartsWithSubchartsAllSpecifiedInDependency(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values, GetTags(c.Values)); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 
@@ -391,7 +393,7 @@ func TestDependentChartsWithSomeSubchartsSpecifiedInDependency(t *testing.T) {
 		t.Fatalf("expected 2 dependencies for this chart, but got %d", len(c.Dependencies()))
 	}
 
-	if err := ProcessDependencyEnabled(c, c.Values); err != nil {
+	if err := ProcessDependencyEnabled(c, c.Values, GetTags(c.Values)); err != nil {
 		t.Fatalf("expected no errors but got %q", err)
 	}
 

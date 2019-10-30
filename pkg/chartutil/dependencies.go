@@ -39,6 +39,7 @@ func processDependencyConditions(reqs []*chart.Dependency, cvals Values) {
 				if err == nil {
 					// if not bool, warn
 					if bv, ok := vv.(bool); ok {
+						fmt.Printf("Enabled(%s/%s): %v\n", r.Name, r.Alias, bv)
 						r.Enabled = bv
 						break
 					} else {
@@ -54,20 +55,16 @@ func processDependencyConditions(reqs []*chart.Dependency, cvals Values) {
 }
 
 // processDependencyTags disables charts based on tags in values
-func processDependencyTags(reqs []*chart.Dependency, cvals Values) {
-	if reqs == nil {
+func processDependencyTags(reqs []*chart.Dependency, tags map[string]interface{}) {
+	if reqs == nil || tags == nil {
 		return
 	}
-	vt, err := cvals.Table("tags")
-	fmt.Printf("processDependencyTags([%d], %v/%v)\n", len(reqs), vt, err)
-	if err != nil {
-		return
-	}
+	fmt.Printf("processDependencyTags([%d], %v)\n", len(reqs), tags)
 	for _, r := range reqs {
 		var hasTrue, hasFalse bool
 		fmt.Printf("Tags(%s/%s): %v\n", r.Name, r.Alias, r.Tags)
 		for _, k := range r.Tags {
-			if b, ok := vt[k]; ok {
+			if b, ok := tags[k]; ok {
 				// if not bool, warn
 				if bv, ok := b.(bool); ok {
 					if bv {
@@ -81,11 +78,21 @@ func processDependencyTags(reqs []*chart.Dependency, cvals Values) {
 			}
 		}
 		if !hasTrue && hasFalse {
+			fmt.Printf("Enabled(%s/%s): %v\n", r.Name, r.Alias, false)
 			r.Enabled = false
 		} else if hasTrue || !hasTrue && !hasFalse {
+			fmt.Printf("Enabled(%s/%s): %v\n", r.Name, r.Alias, true)
 			r.Enabled = true
 		}
 	}
+}
+
+func GetTags(cvals Values) map[string]interface{} {
+	vt, err := cvals.Table("tags")
+	if err != nil {
+		return nil
+	}
+	return vt
 }
 
 func getAliasDependency(charts []*chart.Chart, dep *chart.Dependency) *chart.Chart {
@@ -113,8 +120,8 @@ func getAliasDependency(charts []*chart.Chart, dep *chart.Dependency) *chart.Cha
 }
 
 // processDependencyEnabled removes disabled charts from dependencies
-func ProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}) error {
-	fmt.Printf("processDependencyTags(%s, %v)\n", c.Name(), v)
+func ProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}, tags map[string]interface{}) error {
+	fmt.Printf("ProcessDependencyEnabled(%s, %v)\n", c.Name(), v)
 	if c.Metadata.Dependencies == nil {
 		return nil
 	}
@@ -150,7 +157,7 @@ Loop:
 		lr.Enabled = true
 	}
 	// flag dependencies as enabled/disabled
-	processDependencyTags(c.Metadata.Dependencies, v)
+	processDependencyTags(c.Metadata.Dependencies, tags)
 	processDependencyConditions(c.Metadata.Dependencies, v)
 	// make a map of charts to remove
 	rm := map[string]struct{}{}
