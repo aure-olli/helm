@@ -18,11 +18,13 @@ package engine
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
 
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -631,8 +633,8 @@ func TestAlterFuncMap_tplinclude(t *testing.T) {
 
 }
 
-// moved from chartutil/values_test.go:TestToRenderValues
-// because ToRenderValues no longer coallesce chart values
+// copied from chartutil/values_test.go:TestToRenderValues
+// because ToRenderValues no longer coallesces chart values
 func TestUpdateRenderValues_ToRenderValues(t *testing.T) {
 
 	chartValues := map[string]interface{}{
@@ -646,8 +648,9 @@ func TestUpdateRenderValues_ToRenderValues(t *testing.T) {
 	overideValues := map[string]interface{}{
 		"name": "Haroun",
 		"where": map[string]interface{}{
-			"city": "Baghdad",
-			"date": "809 CE",
+			"city":  "Baghdad",
+			"date":  "809 CE",
+			"title": "caliph",
 		},
 	}
 
@@ -720,4 +723,105 @@ func TestUpdateRenderValues_ToRenderValues(t *testing.T) {
 			t.Errorf("Expected %q, got %q (%v)", expect, got, where)
 		}
 	}
+}
+
+// copied from chartutil/dependencies_test.go:TestDependencyEnabled
+// because ProcessDependencyEnabled is no longer recursive
+func TestUpdateRenderValues_TestDependencyEnabled(t *testing.T) {
+	type M = map[string]interface{}
+	tests := []struct {
+		name string
+		v    M
+		e    []string // expected charts including duplicates in alphanumeric order
+	}{{
+		"tags with no effect",
+		M{"tags": M{"nothinguseful": false}},
+		[]string{"parentchart", "parentchart.subchart1", "parentchart.subchart1.subcharta", "parentchart.subchart1.subchartb"},
+	}, {
+		"tags disabling a group",
+		M{"tags": M{"front-end": false}},
+		[]string{"parentchart"},
+	}, {
+		"tags disabling a group and enabling a different group",
+		M{"tags": M{"front-end": false, "back-end": true}},
+		[]string{"parentchart", "parentchart.subchart2", "parentchart.subchart2.subchartb", "parentchart.subchart2.subchartc"},
+	}, {
+		"tags disabling only children, children still enabled since tag front-end=true in values.yaml",
+		M{"tags": M{"subcharta": false, "subchartb": false}},
+		[]string{"parentchart", "parentchart.subchart1", "parentchart.subchart1.subcharta", "parentchart.subchart1.subchartb"},
+	}, {
+		"tags disabling all parents/children with additional tag re-enabling a parent",
+		M{"tags": M{"front-end": false, "subchart1": true, "back-end": false}},
+		[]string{"parentchart", "parentchart.subchart1"},
+	}, {
+		"conditions enabling the parent charts, but back-end (b, c) is still disabled via values.yaml",
+		M{"subchart1": M{"enabled": true}, "subchart2": M{"enabled": true}},
+		[]string{"parentchart", "parentchart.subchart1", "parentchart.subchart1.subcharta", "parentchart.subchart1.subchartb", "parentchart.subchart2"},
+	}, {
+		"conditions disabling the parent charts, effectively disabling children",
+		M{"subchart1": M{"enabled": false}, "subchart2": M{"enabled": false}},
+		[]string{"parentchart"},
+	}, {
+		"conditions a child using the second condition path of child's condition",
+		M{"subchart1": M{"subcharta": M{"enabled": false}}},
+		[]string{"parentchart", "parentchart.subchart1", "parentchart.subchart1.subchartb"},
+	}, {
+		"tags enabling a parent/child group with condition disabling one child",
+		M{"subchart2": M{"subchartc": M{"enabled": false}}, "tags": M{"back-end": true}},
+		[]string{"parentchart", "parentchart.subchart1", "parentchart.subchart1.subcharta", "parentchart.subchart1.subchartb", "parentchart.subchart2", "parentchart.subchart2.subchartb"},
+	}, {
+		"tags will not enable a child if parent is explicitly disabled with condition",
+		M{"subchart1": M{"enabled": false}, "tags": M{"front-end": true}},
+		[]string{"parentchart"},
+	}, {
+		"subcharts with alias also respect conditions",
+		M{"subchart1": M{"enabled": false}, "subchart2alias": M{"enabled": true, "subchartb": M{"enabled": true}}},
+		[]string{"parentchart", "parentchart.subchart2alias", "parentchart.subchart2alias.subchartb"},
+	}}
+
+	for _, tc := range tests {
+		c := loadChart(t, "../chartutil/testdata/subpop")
+		vals := map[string]interface{}{"Values": tc.v}
+		t.Run(tc.name, func(t *testing.T) {
+			if err := new(Engine).updateRenderValues(c, vals); err != nil {
+				t.Fatalf("error processing enabled dependencies %v", err)
+			}
+
+			names := extractChartNames(c)
+			if len(names) != len(tc.e) {
+				t.Fatalf("slice lengths do not match got %v, expected %v", len(names), len(tc.e))
+			}
+			for i := range names {
+				if names[i] != tc.e[i] {
+					t.Fatalf("slice values do not match got %v, expected %v", names, tc.e)
+				}
+			}
+		})
+	}
+}
+
+// copied from chartutil/dependencies_test.go:loadChart
+func loadChart(t *testing.T, path string) *chart.Chart {
+	t.Helper()
+	c, err := loader.Load(path)
+	if err != nil {
+		t.Fatalf("failed to load testdata: %s", err)
+	}
+	return c
+}
+
+// copied from chartutil/dependencies_test.go:extractChartNames
+// extractCharts recursively searches chart dependencies returning all charts found
+func extractChartNames(c *chart.Chart) []string {
+	var out []string
+	var fn func(c *chart.Chart)
+	fn = func(c *chart.Chart) {
+		out = append(out, c.ChartPath())
+		for _, d := range c.Dependencies() {
+			fn(d)
+		}
+	}
+	fn(c)
+	sort.Strings(out)
+	return out
 }
