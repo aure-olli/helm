@@ -135,15 +135,16 @@ func TestToRenderValues(t *testing.T) {
 		t.Error("Expected Capabilities to have a Kube version")
 	}
 
-	vals := res["Values"].(Values)
+	vals := res["Values"].(map[string]interface{})
 	if vals["name"] != "Haroun" {
 		t.Errorf("Expected 'Haroun', got %q (%v)", vals["name"], vals)
 	}
 	where := vals["where"].(map[string]interface{})
 	expects := map[string]string{
-		"city":  "Baghdad",
-		"date":  "809 CE",
-		"title": "caliph",
+		"city": "Baghdad",
+		"date": "809 CE",
+		// ToRenderValues no longer coallesce chart values
+		// "title": "caliph",
 	}
 	for field, expect := range expects {
 		if got := where[field]; got != expect {

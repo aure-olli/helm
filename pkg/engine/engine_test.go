@@ -630,3 +630,94 @@ func TestAlterFuncMap_tplinclude(t *testing.T) {
 	}
 
 }
+
+// moved from chartutil/values_test.go:TestToRenderValues
+// because ToRenderValues no longer coallesce chart values
+func TestUpdateRenderValues_ToRenderValues(t *testing.T) {
+
+	chartValues := map[string]interface{}{
+		"name": "al Rashid",
+		"where": map[string]interface{}{
+			"city":  "Basrah",
+			"title": "caliph",
+		},
+	}
+
+	overideValues := map[string]interface{}{
+		"name": "Haroun",
+		"where": map[string]interface{}{
+			"city": "Baghdad",
+			"date": "809 CE",
+		},
+	}
+
+	c := &chart.Chart{
+		Metadata:  &chart.Metadata{Name: "test"},
+		Templates: []*chart.File{},
+		Values:    chartValues,
+		Files: []*chart.File{
+			{Name: "scheherazade/shahryar.txt", Data: []byte("1,001 Nights")},
+		},
+	}
+	c.AddDependency(&chart.Chart{
+		Metadata: &chart.Metadata{Name: "where"},
+	})
+
+	o := chartutil.ReleaseOptions{
+		Name:      "Seven Voyages",
+		Namespace: "default",
+		Revision:  1,
+		IsInstall: true,
+	}
+
+	res, err := chartutil.ToRenderValues(c, overideValues, o, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = new(Engine).updateRenderValues(c, res); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure that the top-level values are all set.
+	if name := res["Chart"].(*chart.Metadata).Name; name != "test" {
+		t.Errorf("Expected chart name 'test', got %q", name)
+	}
+	relmap := res["Release"].(map[string]interface{})
+	if name := relmap["Name"]; name.(string) != "Seven Voyages" {
+		t.Errorf("Expected release name 'Seven Voyages', got %q", name)
+	}
+	if namespace := relmap["Namespace"]; namespace.(string) != "default" {
+		t.Errorf("Expected namespace 'default', got %q", namespace)
+	}
+	if revision := relmap["Revision"]; revision.(int) != 1 {
+		t.Errorf("Expected revision '1', got %d", revision)
+	}
+	if relmap["IsUpgrade"].(bool) {
+		t.Error("Expected upgrade to be false.")
+	}
+	if !relmap["IsInstall"].(bool) {
+		t.Errorf("Expected install to be true.")
+	}
+	if !res["Capabilities"].(*chartutil.Capabilities).APIVersions.Has("v1") {
+		t.Error("Expected Capabilities to have v1 as an API")
+	}
+	if res["Capabilities"].(*chartutil.Capabilities).KubeVersion.Major != "1" {
+		t.Error("Expected Capabilities to have a Kube version")
+	}
+
+	vals := res["Values"].(map[string]interface{})
+	if vals["name"] != "Haroun" {
+		t.Errorf("Expected 'Haroun', got %q (%v)", vals["name"], vals)
+	}
+	where := vals["where"].(map[string]interface{})
+	expects := map[string]string{
+		"city":  "Baghdad",
+		"date":  "809 CE",
+		"title": "caliph",
+	}
+	for field, expect := range expects {
+		if got := where[field]; got != expect {
+			t.Errorf("Expected %q, got %q (%v)", expect, got, where)
+		}
+	}
+}
