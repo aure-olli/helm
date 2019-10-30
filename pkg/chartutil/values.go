@@ -154,6 +154,7 @@ func ToRenderValues(chrt *chart.Chart, chrtVals map[string]interface{}, options 
 	top := map[string]interface{}{
 		"Chart":        chrt.Metadata,
 		"Capabilities": caps,
+		"Values":       nil,
 		"Release": map[string]interface{}{
 			"Name":      options.Name,
 			"Namespace": options.Namespace,
@@ -164,18 +165,17 @@ func ToRenderValues(chrt *chart.Chart, chrtVals map[string]interface{}, options 
 		},
 	}
 
-	v, err := copystructure.Copy(chrtVals)
-	if err != nil {
-		return top, err
-	}
-
-	vals := v.(map[string]interface{})
 	// if we have an empty map, make sure it is initialized
-	if vals == nil {
-		vals = make(map[string]interface{})
+	if chrtVals == nil {
+		top["Values"] = make(map[string]interface{})
+	} else {
+		vals, err := copystructure.Copy(chrtVals)
+		if err != nil {
+			return top, err
+		}
+		top["Values"] = vals.(map[string]interface{})
 	}
 
-	top["Values"] = vals
 	return top, nil
 }
 

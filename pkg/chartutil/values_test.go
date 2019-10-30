@@ -172,11 +172,12 @@ chapter:
   three:
     title: "The Spouter Inn"
 `
+	var d Values
 	d, err := ReadValues([]byte(doc))
 	if err != nil {
 		panic(err)
 	}
-	ch1, err := Values(d).Table("chapter.one")
+	ch1, err := d.Table("chapter.one")
 	if err != nil {
 		panic("could not find chapter one")
 	}

@@ -123,7 +123,7 @@ func LoadFiles(files []*BufferedFile) (*chart.Chart, error) {
 		case strings.HasPrefix(f.Name, "templates/"):
 			c.Templates = append(c.Templates, &chart.File{Name: f.Name, Data: f.Data})
 		case strings.HasPrefix(f.Name, "values/"):
-			c.ExtraValues = append(c.ExtraValues, &chart.File{Name: f.Name, Data: f.Data})
+			c.ValuesTemplates = append(c.ValuesTemplates, &chart.File{Name: f.Name, Data: f.Data})
 		case strings.HasPrefix(f.Name, "charts/"):
 			if filepath.Ext(f.Name) == ".prov" {
 				c.Files = append(c.Files, &chart.File{Name: f.Name, Data: f.Data})

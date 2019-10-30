@@ -165,7 +165,6 @@ Loop:
 			cd = append(cd, n)
 		}
 	}
-
 	c.SetDependencies(cd...)
 
 	return nil
@@ -243,9 +242,9 @@ func processImportValues(c *chart.Chart, cvals Values) error {
 	return nil
 }
 
-// processDependencyImportValues imports specified chart values from child to parent.
+// ProcessDependencyImportValues imports specified chart values from child to parent.
 //
-// v is expected to existing path to every sub chart
+// v is expected to have existing path for every sub chart
 func ProcessDependencyImportValues(c *chart.Chart, v map[string]interface{}) error {
 	for _, d := range c.Dependencies() {
 		// recurse

@@ -33,7 +33,7 @@ type Chart struct {
 	// Templates for this chart.
 	Templates []*File
 	// Values templates for this chart.
-	ExtraValues []*File
+	ValuesTemplates []*File
 	// Values are default config for this template.
 	Values map[string]interface{}
 	// Schema is an optional JSON schema for imposing structure on Values

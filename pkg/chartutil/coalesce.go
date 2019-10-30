@@ -37,8 +37,6 @@ import (
 func CoalesceValues(chrt *chart.Chart, vals map[string]interface{}) (map[string]interface{}, error) {
 	// create a copy of vals and then pass it to coalesce
 	// and coalesceDeps, as both will mutate the passed values
-
-	// TODO: check usage
 	v, err := copystructure.Copy(vals)
 	if err != nil {
 		return vals, err

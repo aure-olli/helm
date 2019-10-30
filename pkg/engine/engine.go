@@ -298,6 +298,7 @@ func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, tag
 		"Files":        newFiles(c.Files),
 		"Release":      vals["Release"],
 		"Capabilities": vals["Capabilities"],
+		"Values":       nil,
 	}
 
 	// If there is a {{.Values.ThisChart}} in the parent metadata,
@@ -324,7 +325,7 @@ func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, tag
 	// Get all values templates of the chart
 	templates := make(map[string]renderable)
 	newParentID := c.ChartFullPath()
-	for _, t := range c.ExtraValues {
+	for _, t := range c.ValuesTemplates {
 		if !isTemplateValid(c, t.Name) {
 			continue
 		}
