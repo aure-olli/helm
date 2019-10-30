@@ -144,9 +144,8 @@ func TestDependencyEnabled(t *testing.T) {
 
 	for _, tc := range tests {
 		c := loadChart(t, "testdata/subpop")
-		values := map[string]interface{}{"Values": tc.v}
 		t.Run(tc.name, func(t *testing.T) {
-			if err := recProcessDependencyEnabled(c, values, nil); err != nil {
+			if err := recProcessDependencyEnabled(c, tc.v, nil); err != nil {
 				t.Fatalf("error processing enabled dependencies %v", err)
 			}
 
