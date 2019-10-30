@@ -180,3 +180,9 @@ func TestCoalesceTables(t *testing.T) {
 		t.Errorf("Expected boat string, got %v", dst["boat"])
 	}
 }
+
+// TODO! test CoalesceTablesUpdate
+
+// TODO! test CoalesceDep
+
+// TODO! test CoalesceRoot
