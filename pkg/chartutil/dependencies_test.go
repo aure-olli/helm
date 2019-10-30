@@ -61,17 +61,28 @@ func TestLoadDependency(t *testing.T) {
 	check(c.Lock.Dependencies)
 }
 
+// recProcessDependencyEnabled is mostly a simplified version of
+// Engine.recUpdateRenderValues, for testing only dependencies
 func recProcessDependencyEnabled(c *chart.Chart, v map[string]interface{}) error {
-	if err := ProcessDependencyEnabled(c, v); err != nil {
+	// get the local values
+	var err error
+	if c.IsRoot() {
+		v, err = CoalesceRoot(c, v)
+	} else {
+		v, err = CoalesceDep(c, v)
+	}
+	if err != nil {
 		return err
 	}
-	for _, d := range c.Dependencies() {
-		dv, ok := v[d.Name()]
-		dm := map[string]interface{}{}
-		if ok && dv != nil {
-			dm = dv.(map[string]interface{})
-		}
-		if err := recProcessDependencyEnabled(d, dm); err != nil {
+	// Remove all disabled dependencies
+	err = ProcessDependencyEnabled(c, v)
+	if err != nil {
+		return err
+	}
+	// Recursive upudate on enabled dependencies
+	for _, child := range c.Dependencies() {
+		err = recProcessDependencyEnabled(child, v)
+		if err != nil {
 			return err
 		}
 	}
