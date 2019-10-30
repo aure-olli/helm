@@ -281,7 +281,8 @@ func (e Engine) updateRenderValues(c *chart.Chart, vals chartutil.Values) error 
 	}
 	// Check for values validation errors
 	if sb.Len() > 0 {
-		return errors.New(sb.String())
+		errFmt := "values don't meet the specifications of the schema(s) in the following chart(s):\n%s"
+		return fmt.Errorf(errFmt, sb.String())
 	}
 	// import values from dependenvies
 	if err := chartutil.ProcessDependencyImportValues(c, vals["Values"].(map[string]interface{})); err != nil {
