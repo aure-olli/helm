@@ -828,6 +828,4 @@ func extractChartNames(c *chart.Chart) []string {
 
 // TODO! test more updateRenderValues with values templates
 
-// TODO! test Rends with values templates
-
-// TODO! test sortValues
+// TODO! test Render with values templates

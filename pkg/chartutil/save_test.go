@@ -118,6 +118,9 @@ func TestSaveDir(t *testing.T) {
 		Templates: []*chart.File{
 			{Name: filepath.Join(TemplatesDir, "nested", "dir", "thing.yaml"), Data: []byte("abc: {{ .Values.abc }}")},
 		},
+		ValuesTemplates: []*chart.File{
+			{Name: filepath.Join(ValuesTemplatesDir, "other", "nested", "stuff.yaml"), Data: []byte("def: {{ .Values.def }}")},
+		},
 	}
 
 	if err := SaveDir(c, tmp); err != nil {
@@ -137,9 +140,11 @@ func TestSaveDir(t *testing.T) {
 		t.Fatal("Templates data did not match")
 	}
 
+	if len(c2.ValuesTemplates) != 1 || c2.ValuesTemplates[0].Name != filepath.Join(ValuesTemplatesDir, "other", "nested", "stuff.yaml") {
+		t.Fatal("ValuesTemplates data did not match")
+	}
+
 	if len(c2.Files) != 1 || c2.Files[0].Name != "scheherazade/shahryar.txt" {
 		t.Fatal("Files data did not match")
 	}
 }
-
-// TODO! test ValuesTemplates saving

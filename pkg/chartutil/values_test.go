@@ -85,9 +85,8 @@ func TestToRenderValues(t *testing.T) {
 	}
 
 	c := &chart.Chart{
-		Metadata:  &chart.Metadata{Name: "test"},
-		Templates: []*chart.File{},
-		Values:    chartValues,
+		Metadata: &chart.Metadata{Name: "test"},
+		Values:   chartValues,
 		Files: []*chart.File{
 			{Name: "scheherazade/shahryar.txt", Data: []byte("1,001 Nights")},
 		},

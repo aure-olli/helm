@@ -18,6 +18,7 @@ package chartutil
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"helm.sh/helm/v3/pkg/chart"
@@ -242,11 +243,8 @@ func TestCoalesceDep(t *testing.T) {
 		t.Fatal("subchart went away.")
 	} else if dm, ok := d.(map[string]interface{}); !ok {
 		t.Fatalf("subchart has now wrong type: %t", d)
-	} else {
-		dst["!"] = "!"
-		if v, ok := dm["!"]; !ok || v.(string) != "!" {
-			t.Error("CoalesceDep must return subchart map.")
-		}
+	} else if reflect.ValueOf(dst).Pointer() != reflect.ValueOf(dm).Pointer() {
+		t.Error("CoalesceDep must return subchart map.")
 	}
 
 	testCoalescedData(t, dst)

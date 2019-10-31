@@ -258,3 +258,5 @@ func prepareMockRelease(releaseName string, t *testing.T) (func(n string, v int,
 
 	return relMock, ch, chartPath
 }
+
+// TODO! test for ValuesTeampltes too

@@ -143,6 +143,7 @@ type chartOptions struct {
 type chartOption func(*chartOptions)
 
 func buildChart(opts ...chartOption) *chart.Chart {
+	// TODO! values templates ?
 	c := &chartOptions{
 		Chart: &chart.Chart{
 			// TODO: This should be more complete.

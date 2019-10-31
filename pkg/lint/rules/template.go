@@ -37,15 +37,13 @@ var (
 
 // Templates lints the templates in the Linter.
 func Templates(linter *support.Linter, values map[string]interface{}, namespace string, strict bool) {
-	path := "templates/"
-	templatesPath := filepath.Join(linter.ChartDir, path)
+	path := ""
 
-	templatesDirExist := linter.RunLinterRule(support.WarningSev, path, validateTemplatesDir(templatesPath))
+	// No warning for values templates directory yet
+	// linter.RunLinterRule(support.WarningSev, "values/", validateTemplatesDir(filepath.Join(linter.ChartDir, "values/")))
 
 	// Templates directory is optional for now
-	if !templatesDirExist {
-		return
-	}
+	linter.RunLinterRule(support.WarningSev, "templates/", validateTemplatesDir(filepath.Join(linter.ChartDir, "templates/")))
 
 	// Load chart and parse templates, based on tiller/release_server
 	chart, err := loader.Load(linter.ChartDir)
@@ -77,6 +75,26 @@ func Templates(linter *support.Linter, values map[string]interface{}, namespace 
 		return
 	}
 
+	/* Iterate over all the values templates to check:
+	- It is a .yaml file
+	- All the values in the template file is defined
+	- {{}} include | quote
+	*/
+	for _, template := range chart.ValuesTemplates {
+		fileName, data := template.Name, template.Data
+		path = fileName
+
+		linter.RunLinterRule(support.ErrorSev, path, validateAllowedExtension(fileName))
+		// These are v3 specific checks to make sure and warn people if their
+		// chart is not compatible with v3
+		linter.RunLinterRule(support.WarningSev, path, validateNoCRDHooks(data))
+		linter.RunLinterRule(support.ErrorSev, path, validateNoReleaseTime(data))
+
+		// NOTE: disabled for now, Refs https://github.com/helm/helm/issues/1037
+		// linter.RunLinterRule(support.WarningSev, path, validateQuotes(string(preExecutedTemplate)))
+
+		// e.Render already have already checked if the content is a valid Yaml file
+	}
 	/* Iterate over all the templates to check:
 	- It is a .yaml file
 	- All the values in the template file is defined

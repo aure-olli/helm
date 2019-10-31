@@ -65,8 +65,8 @@ func SaveDir(c *chart.Chart, dest string) error {
 		}
 	}
 
-	// Save templates and files
-	for _, o := range [][]*chart.File{c.Templates, c.Files} {
+	// Save values templates, templates and files
+	for _, o := range [][]*chart.File{c.ValuesTemplates, c.Templates, c.Files} {
 		for _, f := range o {
 			n := filepath.Join(outdir, f.Name)
 			if err := writeFile(n, f.Data); err != nil {

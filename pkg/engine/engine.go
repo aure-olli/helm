@@ -342,7 +342,7 @@ func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, tag
 	}
 	// Parse and apply all values templates
 	if len(rendered) > 0 {
-		for _, filename := range sortValues(rendered) {
+		for _, filename := range sortValuesTemplates(rendered) {
 			src := make(map[string]interface{})
 			if err := yaml.Unmarshal([]byte(rendered[filename]), &src); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
@@ -369,8 +369,8 @@ func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, tag
 	return nil
 }
 
-// sortValues sorts the rendered yaml values files from lowest to highest priority
-func sortValues(tpls map[string]string) []string {
+// sortValuesTemplates sorts the rendered yaml values files from lowest to highest priority
+func sortValuesTemplates(tpls map[string]string) []string {
 	keys := make(sort.StringSlice, len(tpls))
 	i := 0
 	for key := range tpls {
