@@ -347,7 +347,7 @@ func (e Engine) recUpdateRenderValues(c *chart.Chart, vals chartutil.Values, tag
 			if err := yaml.Unmarshal([]byte(rendered[filename]), &src); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("cannot load %s", filename))
 			}
-			chartutil.CoalesceTablesUpdate(tags, src)
+			chartutil.CoalesceTablesUpdate(nvals, src)
 		}
 	}
 	// Get tags of the root

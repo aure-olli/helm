@@ -1,0 +1,6 @@
+# should be replaced by values templates values/replaced[12].yaml
+replaced: "values.yaml"
+# edited by values/coalesce.yaml
+coalesce:
+  old: "values.yaml"
+  common: "values.yaml"

@@ -633,6 +633,60 @@ func TestAlterFuncMap_tplinclude(t *testing.T) {
 
 }
 
+func TestUpdateRenderValues(t *testing.T) {
+	values := map[string]interface{}{}
+	rv := map[string]interface{}{
+		"Release": map[string]interface{}{
+			"Name": "Test Name",
+		},
+		"Values": values,
+	}
+	c := loadChart(t, "testdata/values_templates")
+
+	if err := new(Engine).updateRenderValues(c, rv); err != nil {
+		t.Fatal(err)
+	}
+
+	if v, ok := values["replaced"]; !ok {
+		t.Errorf("field 'replaced' missing")
+	} else if vs := v.(string); vs != "values/replaced2.yaml" {
+		t.Errorf("wrong priority on field 'replaced', value from %s", vs)
+	}
+
+	if v, ok := values["currentReplaced1"]; !ok {
+		t.Errorf("field 'currentReplaced1' missing")
+	} else if vs := v.(string); vs != "values.yaml" {
+		t.Errorf("wrong evaluation order on field 'currentReplaced1', value from %s", vs)
+	}
+
+	if v, ok := values["currentReplaced2"]; !ok {
+		t.Errorf("field 'currentReplaced2' missing")
+	} else if vs := v.(string); vs != "values.yaml" {
+		t.Errorf("wrong evaluation order on field 'currentReplaced2', value from %s", vs)
+	}
+
+	if vm, ok := values["coalesce"]; !ok {
+		t.Errorf("field 'coalesce' missing")
+	} else {
+		m := vm.(map[string]interface{})
+		if v, ok := m["old"]; !ok {
+			t.Errorf("field 'coalesce.old' missing")
+		} else if vs := v.(string); vs != "values.yaml" {
+			t.Errorf("wrong priority on field 'coalesce.old', value from %s", vs)
+		}
+		if v, ok := m["common"]; !ok {
+			t.Errorf("field 'coalesce.common' missing")
+		} else if vs := v.(string); vs != "values/coalesce.yaml" {
+			t.Errorf("wrong priority on field 'coalesce.common', value from %s", vs)
+		}
+		if v, ok := m["new"]; !ok {
+			t.Errorf("field 'coalesce.new' missing")
+		} else if vs := v.(string); vs != "values/coalesce.yaml" {
+			t.Errorf("wrong priority on field 'coalesce.new', value from %s", vs)
+		}
+	}
+}
+
 // copied from chartutil/values_test.go:TestToRenderValues
 // because ToRenderValues no longer coallesces chart values
 func TestUpdateRenderValues_ToRenderValues(t *testing.T) {
