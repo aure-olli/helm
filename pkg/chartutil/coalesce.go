@@ -216,19 +216,17 @@ func CoalesceTablesUpdate(dst, src map[string]interface{}) map[string]interface{
 		if istable(val) {
 			switch innerdst, ok := dst[key]; {
 			case !ok:
-				dst[key] = val
 			case istable(innerdst):
 				CoalesceTablesUpdate(innerdst.(map[string]interface{}),
 					val.(map[string]interface{}))
+				continue
 			default:
 				log.Printf("warning: overwriting not table with table for %s (%v)", key, innerdst)
-				dst[key] = val
 			}
 		} else if dv, ok := dst[key]; ok && istable(dv) {
 			log.Printf("warning: overwriting table with non table for %s (%v)", key, dv)
-		} else {
-			dst[key] = val
 		}
+		dst[key] = val
 	}
 	return dst
 }

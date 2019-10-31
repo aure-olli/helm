@@ -17,6 +17,7 @@ package chartutil
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"testing"
@@ -409,4 +410,32 @@ func TestDependentChartsWithSomeSubchartsSpecifiedInDependency(t *testing.T) {
 	}
 }
 
-// TODO! GetTags
+func TestGetTags(t *testing.T) {
+	type M = map[string]interface{}
+	tests := []struct {
+		name string
+		vals M
+		tags M
+	}{{
+		"normal tags",
+		M{"tags": M{"a": true, "b": false}},
+		M{"a": true, "b": false},
+	}, {
+		"not an object tags",
+		M{"tags": []interface{}{"a", "b"}},
+		nil,
+	}, {
+		"no tags",
+		M{"no_tags": M{"a": true, "b": false}},
+		nil,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tags := GetTags(tt.vals)
+			if !reflect.DeepEqual(tags, tt.tags) {
+				t.Fatalf("tags map do not match got %v, expected %v", tags, tt.tags)
+			}
+		})
+	}
+}
