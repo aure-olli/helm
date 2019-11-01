@@ -29,7 +29,9 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   import-values:
-  - importValues
-  - importTemplate
+  - child: importValues
+    parent: importValues
+  - child: importTemplate
+    parent: importTemplate
   - child: import
     parent: subImport

@@ -1150,6 +1150,4 @@ func extractChartNames(c *chart.Chart) []string {
 	return out
 }
 
-// TODO! test more updateRenderValues with values templates
-
 // TODO! test Render with values templates
