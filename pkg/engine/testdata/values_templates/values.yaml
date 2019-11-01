@@ -8,12 +8,12 @@ coalesce:
   old: "values.yaml"
   common: "values.yaml"
 
-subtests:
-  # should replaced by subtests/values/replaced.yaml
+subchart:
+  # should replaced by subchart/values/replaced.yaml
   replaced1: "values.yaml"
   replaced2: "values.yaml"
-  # should coalesce with values/sub_coalesce.yaml, subtests/values.yaml
-  # and subtests/values/coalesce.yaml
+  # should coalesce with values/sub_coalesce.yaml, subchart/values.yaml
+  # and subchart/values/coalesce.yaml
   coalesce:
     value1: "values.yaml"
     value2: "values.yaml"

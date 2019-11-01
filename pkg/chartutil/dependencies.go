@@ -16,6 +16,7 @@ limitations under the License.
 package chartutil
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -27,6 +28,7 @@ func processDependencyConditions(reqs []*chart.Dependency, cvals Values) {
 	if reqs == nil {
 		return
 	}
+	fmt.Println("processDependencyConditions")
 	for _, r := range reqs {
 		for _, c := range strings.Split(strings.TrimSpace(r.Condition), ",") {
 			if len(c) > 0 {
@@ -35,6 +37,7 @@ func processDependencyConditions(reqs []*chart.Dependency, cvals Values) {
 				if err == nil {
 					// if not bool, warn
 					if bv, ok := vv.(bool); ok {
+						fmt.Printf("enabled %s %v\n", r.Name, bv)
 						r.Enabled = bv
 						break
 					} else {
@@ -54,8 +57,10 @@ func processDependencyTags(reqs []*chart.Dependency, tags map[string]interface{}
 	if reqs == nil || tags == nil {
 		return
 	}
+	fmt.Printf("processDependencyTags [%d] %v\n", len(reqs), tags)
 	for _, r := range reqs {
 		var hasTrue, hasFalse bool
+		fmt.Printf("tags %s %v\n", r.Name, r.Tags)
 		for _, k := range r.Tags {
 			if b, ok := tags[k]; ok {
 				// if not bool, warn
@@ -71,8 +76,10 @@ func processDependencyTags(reqs []*chart.Dependency, tags map[string]interface{}
 			}
 		}
 		if !hasTrue && hasFalse {
+			fmt.Printf("enabled %s %v\n", r.Name, true)
 			r.Enabled = false
 		} else if hasTrue || !hasTrue && !hasFalse {
+			fmt.Printf("enabled %s %v\n", r.Name, false)
 			r.Enabled = true
 		}
 	}

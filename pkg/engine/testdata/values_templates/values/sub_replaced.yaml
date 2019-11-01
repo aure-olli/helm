@@ -1,5 +1,5 @@
 
-subtests:
-  # should replaced by subtests/values/replaced.yaml
+subchart:
+  # should replaced by subchart/values/replaced.yaml
   replaced3: "values/sub_replaced.yaml"
   replaced4: "values/sub_replaced.yaml"
