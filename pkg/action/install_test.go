@@ -35,8 +35,6 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-// TODO! test with values templates ?
-
 type nameTemplateTestCase struct {
 	tpl              string
 	expected         string

@@ -1149,5 +1149,3 @@ func extractChartNames(c *chart.Chart) []string {
 	sort.Strings(out)
 	return out
 }
-
-// TODO! test Render with values templates
