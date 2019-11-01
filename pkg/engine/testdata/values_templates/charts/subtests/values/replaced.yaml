@@ -1,0 +1,4 @@
+# replacement should work
+replaced2: "subtests/values/replaced.yaml"
+replaced4: "subtests/values/replaced.yaml"
+currentReplaced2: "{{ .Values.replaced2 }}"

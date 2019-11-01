@@ -633,7 +633,7 @@ func TestAlterFuncMap_tplinclude(t *testing.T) {
 
 }
 
-func TestUpdateRenderValues(t *testing.T) {
+func TestUpdateRenderValues_values_priority(t *testing.T) {
 	values := map[string]interface{}{}
 	rv := map[string]interface{}{
 		"Release": map[string]interface{}{
@@ -646,25 +646,23 @@ func TestUpdateRenderValues(t *testing.T) {
 	if err := new(Engine).updateRenderValues(c, rv); err != nil {
 		t.Fatal(err)
 	}
-
+	// Check root remplacements
 	if v, ok := values["replaced"]; !ok {
 		t.Errorf("field 'replaced' missing")
 	} else if vs := v.(string); vs != "values/replaced2.yaml" {
 		t.Errorf("wrong priority on field 'replaced', value from %s", vs)
 	}
-
 	if v, ok := values["currentReplaced1"]; !ok {
 		t.Errorf("field 'currentReplaced1' missing")
 	} else if vs := v.(string); vs != "values.yaml" {
 		t.Errorf("wrong evaluation order on field 'currentReplaced1', value from %s", vs)
 	}
-
 	if v, ok := values["currentReplaced2"]; !ok {
 		t.Errorf("field 'currentReplaced2' missing")
 	} else if vs := v.(string); vs != "values.yaml" {
 		t.Errorf("wrong evaluation order on field 'currentReplaced2', value from %s", vs)
 	}
-
+	// check root coalesce
 	if vm, ok := values["coalesce"]; !ok {
 		t.Errorf("field 'coalesce' missing")
 	} else {
@@ -685,10 +683,144 @@ func TestUpdateRenderValues(t *testing.T) {
 			t.Errorf("wrong priority on field 'coalesce.new', value from %s", vs)
 		}
 	}
+	// check root global
+	if vm, ok := values["global"]; !ok {
+		t.Errorf("field 'global' missing")
+	} else {
+		m := vm.(map[string]interface{})
+		if v, ok := m["parentValues"]; !ok || !v.(bool) {
+			t.Errorf("field 'global.parentValues' missing")
+		}
+		if v, ok := m["parentTemplate"]; !ok || !v.(bool) {
+			t.Errorf("field 'global.parentTemplate' missing")
+		}
+		if _, ok := m["subValues"]; ok {
+			t.Errorf("field 'global.subValues' unexpected")
+		}
+		if _, ok := m["subTeamplate"]; ok {
+			t.Errorf("field 'global.subTeamplate' unexpected")
+		}
+	}
+	// check subtests
+	if vm, ok := values["subtests"]; !ok {
+		t.Errorf("field 'subtests' missing")
+	} else {
+		// check subtests evaluated
+		m := vm.(map[string]interface{})
+		if v, ok := m["evaluated"]; !ok || !v.(bool) {
+			t.Errorf("chart 'subtests' not evaluated")
+		}
+		// check subtests replaced
+		if v, ok := m["replaced1"]; !ok {
+			t.Errorf("field 'subtests.replaced1' missing")
+		} else if vs := v.(string); vs != "values.yaml" {
+			t.Errorf("wrong priority on field 'subtests.replaced1', value from %s", vs)
+		}
+		if v, ok := m["replaced2"]; !ok {
+			t.Errorf("field 'subtests.replaced2' missing")
+		} else if vs := v.(string); vs != "subtests/values/replaced.yaml" {
+			t.Errorf("wrong priority on field 'subtests.replaced2', value from %s", vs)
+		}
+		if v, ok := m["replaced3"]; !ok {
+			t.Errorf("field 'subtests.replaced3' missing")
+		} else if vs := v.(string); vs != "values/sub_replaced.yaml" {
+			t.Errorf("wrong priority on field 'subtests.replaced3', value from %s", vs)
+		}
+		if v, ok := m["replaced4"]; !ok {
+			t.Errorf("field 'subtests.replaced4' missing")
+		} else if vs := v.(string); vs != "subtests/values/replaced.yaml" {
+			t.Errorf("wrong priority on field 'subtests.replaced4', value from %s", vs)
+		}
+		if v, ok := m["currentReplaced2"]; !ok {
+			t.Errorf("field 'subtests.currentReplaced2' missing")
+		} else if vs := v.(string); vs != "values.yaml" {
+			t.Errorf("wrong evaluation order on field 'subtests.currentReplaced2', value from %s", vs)
+		}
+		// check subtests coalesce
+		if vm, ok := m["coalesce"]; !ok {
+			t.Errorf("field 'subtests.coalesce' missing")
+		} else {
+			m := vm.(map[string]interface{})
+			if v, ok := m["value1"]; !ok {
+				t.Errorf("field 'subtests.coalesce.value1' missing")
+			} else if vs := v.(string); vs != "values.yaml" {
+				t.Errorf("wrong priority on field 'subtests.coalesce.value1', value from %s", vs)
+			}
+			if v, ok := m["value2"]; !ok {
+				t.Errorf("field 'subtests.coalesce.value2' missing")
+			} else if vs := v.(string); vs != "values.yaml" {
+				t.Errorf("wrong priority on field 'subtests.coalesce.value2', value from %s", vs)
+			}
+			if v, ok := m["value3"]; !ok {
+				t.Errorf("field 'subtests.coalesce.value3' missing")
+			} else if vs := v.(string); vs != "subtests/values/coalesce.yaml" {
+				t.Errorf("wrong priority on field 'subtests.coalesce.value3', value from %s", vs)
+			}
+			if v, ok := m["value4"]; !ok {
+				t.Errorf("field 'subtests.coalesce.value4' missing")
+			} else if vs := v.(string); vs != "subtests/values.yaml" {
+				t.Errorf("wrong priority on field 'subtests.coalesce.value4', value from %s", vs)
+			}
+			if v, ok := m["value5"]; !ok {
+				t.Errorf("field 'subtests.coalesce.value5' missing")
+			} else if vs := v.(string); vs != "subtests/values/coalesce.yaml" {
+				t.Errorf("wrong priority on field 'subtests.coalesce.value5', value from %s", vs)
+			}
+			if v, ok := m["value6"]; !ok {
+				t.Errorf("field 'subtests.coalesce.value6' missing")
+			} else if vs := v.(string); vs != "subtests/values/coalesce.yaml" {
+				t.Errorf("wrong priority on field 'subtests.coalesce.value6', value from %s", vs)
+			}
+		}
+		// check subtests global
+		if vm, ok := m["global"]; !ok {
+			t.Errorf("field 'subtests.global' missing")
+		} else {
+			m := vm.(map[string]interface{})
+			if v, ok := m["parentValues"]; !ok || !v.(bool) {
+				t.Errorf("field 'subtests.global.parentValues' missing")
+			}
+			if v, ok := m["parentTemplate"]; !ok || !v.(bool) {
+				t.Errorf("field 'subtests.global.parentTemplate' missing")
+			}
+			if v, ok := m["subTeamplate"]; !ok || !v.(bool) {
+				t.Errorf("field 'subtests.global.subTeamplate' missing")
+			}
+			if v, ok := m["parentValues"]; !ok || !v.(bool) {
+				t.Errorf("field 'subtests.global.parentValues' missing")
+			}
+		}
+		// check subtests globalEvaluated
+		if vm, ok := m["globalEvaluated"]; !ok {
+			t.Errorf("field 'subtests.globalEvaluated' missing")
+		} else {
+			m := vm.(map[string]interface{})
+			if v, ok := m["parentValues"]; !ok {
+				t.Errorf("field 'subtests.globalEvaluated.parentValues' missing")
+			} else if vb, ok := v.(bool); !ok || !vb {
+				t.Errorf("field 'subtests.globalEvaluated.parentValues' has wrong value: %v", vb)
+			}
+			if v, ok := m["parentTemplate"]; !ok {
+				t.Errorf("field 'subtests.globalEvaluated.parentTemplate' missing")
+			} else if vb, ok := v.(bool); !ok || !vb {
+				t.Errorf("field 'subtests.globalEvaluated.parentTemplate' has wrong value: %v", vb)
+			}
+			if v, ok := m["subValues"]; !ok {
+				t.Errorf("field 'subtests.globalEvaluated.subValues' missing")
+			} else if vb, ok := v.(bool); !ok || !vb {
+				t.Errorf("field 'subtests.globalEvaluated.subValues' has wrong value: %v", vb)
+			}
+			if v, ok := m["subTeamplate"]; !ok {
+				t.Errorf("field 'subtests.globalEvaluated.subTeamplate' missing")
+			} else if v != nil {
+				t.Errorf("field 'subtests.globalEvaluated.subTeamplate' has wrong value: %v", v)
+			}
+		}
+	}
 }
 
 // copied from chartutil/values_test.go:TestToRenderValues
-// because ToRenderValues no longer coallesces chart values
+// because ToRenderValues no longer coalesces chart values
 func TestUpdateRenderValues_ToRenderValues(t *testing.T) {
 
 	chartValues := map[string]interface{}{

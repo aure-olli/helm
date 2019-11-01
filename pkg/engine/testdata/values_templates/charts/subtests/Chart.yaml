@@ -1,4 +1,5 @@
 apiVersion: v2
 description: A Helm chart for Kubernetes
-name: parentchart
+name: subtests
 version: 0.1.0
+dependencies:

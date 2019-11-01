@@ -1,0 +1,13 @@
+# should coalesce with parent global
+global:
+  subValues: true
+# should be evaluated
+evaluated: true
+# original value should be kept
+replaced1: "subtests/values.yaml"
+replaced3: "subtests/values.yaml"
+# should cloalesce with parent values.yaml
+coalesce:
+  value2: "subtests/values.yaml"
+  value4: "subtests/values.yaml"
+  value5: "subtests/values.yaml"
